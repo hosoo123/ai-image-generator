@@ -80,6 +80,17 @@ button { color: inherit; }
 
 .muted { color: var(--muted-foreground); font-size: 14px; line-height: 20px; margin: 0; }
 
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: #b91c1c;
+  font-size: 14px;
+  line-height: 20px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+}
+
 .icon-button {
   align-items: center;
   background: white;

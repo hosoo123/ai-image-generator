@@ -22,19 +22,6 @@ const toolLabels: Record<Tool, string> = {
   creator: "Image creator",
 };
 
-const ingredientResult = [
-  "Spaghetti",
-  "Eggs",
-  "Parmesan cheese",
-  "Pancetta",
-  "Black pepper",
-  "Garlic",
-  "Salt (a pinch)",
-];
-
-const pastaImage =
-  "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=900&q=85";
-
 export function AiTools() {
   const [activeTool, setActiveTool] = useState<Tool>("analysis");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,14 +32,14 @@ export function AiTools() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [generatedImage, setGeneratedImage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: "How can I help you today?" },
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const wait = () => new Promise((resolve) => setTimeout(resolve, 900));
 
   const reset = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -63,6 +50,7 @@ export function AiTools() {
     setAnalysisResult("");
     setIngredients([]);
     setGeneratedImage("");
+    setError("");
     setLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -83,43 +71,90 @@ export function AiTools() {
 
   const analyzeImage = async () => {
     if (!selectedFile || loading) return;
-    setLoading(true);
-    await wait();
-    setAnalysisResult(
-      "The photo appears to contain a balanced meal with fresh vegetables, a protein source, healthy fats, and a lightly seasoned sauce. The visible ingredients may include leafy greens, tomato, avocado, grains, herbs, and grilled protein.",
-    );
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError("");
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+      const response = await fetch("/api/analyze", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Image analysis failed.");
+      setAnalysisResult(String(data.result));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Image analysis failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const recognizeIngredients = async () => {
     if (!description.trim() || loading) return;
-    setLoading(true);
-    await wait();
-    setIngredients(ingredientResult);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError("");
+      const response = await fetch("/api/ingredients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Ingredient recognition failed.");
+      setIngredients(data.ingredients ?? []);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ingredient recognition failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const createImage = async () => {
     if (!creatorPrompt.trim() || loading) return;
-    setLoading(true);
-    await wait();
-    setGeneratedImage(pastaImage);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError("");
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: creatorPrompt }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Image generation failed.");
+      setGeneratedImage(String(data.image));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Image generation failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const sendMessage = (event: FormEvent) => {
+  const sendMessage = async (event: FormEvent) => {
     event.preventDefault();
     const text = chatInput.trim();
-    if (!text) return;
-    setMessages((current) => [
-      ...current,
-      { role: "user", text },
-      {
-        role: "assistant",
-        text: "Spaghetti Carbonara is a comforting Italian classic made with pasta, eggs, cheese, pancetta, and black pepper. Its creamy texture comes from emulsifying eggs and cheese with hot pasta water—no cream is needed.",
-      },
-    ]);
+    if (!text || chatLoading) return;
+    const nextMessages: Message[] = [...messages, { role: "user", text }];
+    setMessages(nextMessages);
     setChatInput("");
+    try {
+      setChatLoading(true);
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Chat request failed.");
+      setMessages((current) => [...current, { role: "assistant", text: String(data.reply) }]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          text: error instanceof Error ? error.message : "Chat request failed.",
+        },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
@@ -139,6 +174,8 @@ export function AiTools() {
             </button>
           ))}
         </nav>
+
+        {error && <p className="error-banner">{error}</p>}
 
         {activeTool === "analysis" && (
           <ToolSection
@@ -291,6 +328,7 @@ export function AiTools() {
                 {message.text}
               </p>
             ))}
+            {chatLoading && <p className="message message-assistant">Thinking...</p>}
           </div>
           <form className="chat-form" onSubmit={sendMessage}>
             <input
@@ -299,7 +337,7 @@ export function AiTools() {
               placeholder="Type your message..."
               value={chatInput}
             />
-            <button aria-label="Send message" disabled={!chatInput.trim()} type="submit">
+            <button aria-label="Send message" disabled={!chatInput.trim() || chatLoading} type="submit">
               <Send />
             </button>
           </form>
