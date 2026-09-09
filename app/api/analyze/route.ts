@@ -11,7 +11,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "Please select an image." }, { status: 400 });
     }
 
-    if (!image.type.startsWith("image/")) {
+    const hasImageMimeType = image.type.startsWith("image/");
+    const hasImageExtension = /\.(jpe?g|png|webp|gif)$/i.test(image.name);
+
+    if (!hasImageMimeType && !hasImageExtension) {
       return Response.json({ error: "The selected file must be an image." }, { status: 400 });
     }
 
@@ -19,8 +22,17 @@ export async function POST(request: Request) {
       return Response.json({ error: "The image must be smaller than 5 MB." }, { status: 400 });
     }
 
+    const mimeType = image.type.startsWith("image/")
+      ? image.type
+      : image.name.toLowerCase().endsWith(".png")
+        ? "image/png"
+        : image.name.toLowerCase().endsWith(".webp")
+          ? "image/webp"
+          : image.name.toLowerCase().endsWith(".gif")
+            ? "image/gif"
+            : "image/jpeg";
     const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
-    const dataUrl = `data:${image.type};base64,${base64}`;
+    const dataUrl = `data:${mimeType};base64,${base64}`;
     const client = getHuggingFaceClient();
     const result = await client.chatCompletion({
       model: process.env.HF_VISION_MODEL || "Qwen/Qwen2.5-VL-3B-Instruct",
