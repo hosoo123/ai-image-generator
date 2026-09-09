@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const client = getHuggingFaceClient();
     const result = await client.chatCompletion({
       model: process.env.HF_VISION_MODEL || "Qwen/Qwen3-VL-8B-Instruct",
-      provider: "auto",
+      provider: "together",
       max_tokens: 450,
       temperature: 0.2,
       messages: [
