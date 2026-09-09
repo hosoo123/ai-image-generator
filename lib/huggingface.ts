@@ -1,4 +1,8 @@
-import { InferenceClient } from "@huggingface/inference";
+import {
+  InferenceClient,
+  InferenceClientHubApiError,
+  InferenceClientProviderApiError,
+} from "@huggingface/inference";
 
 export function getHuggingFaceClient() {
   const token = process.env.HF_TOKEN;
@@ -12,6 +16,26 @@ export function getHuggingFaceClient() {
 
 export function apiError(error: unknown) {
   console.error(error);
+
+  if (
+    error instanceof InferenceClientProviderApiError ||
+    error instanceof InferenceClientHubApiError
+  ) {
+    const providerBody = error.httpResponse.body;
+    const details =
+      typeof providerBody === "string"
+        ? providerBody
+        : JSON.stringify(providerBody);
+
+    return Response.json(
+      {
+        error: error.message,
+        details,
+        providerStatus: error.httpResponse.status,
+      },
+      { status: 502 },
+    );
+  }
 
   const message =
     error instanceof Error ? error.message : "An unexpected AI service error occurred.";
