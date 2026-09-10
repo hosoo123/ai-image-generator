@@ -15,6 +15,12 @@ import { ChangeEvent, FormEvent, useRef, useState } from "react";
 
 type Tool = "analysis" | "ingredients" | "creator";
 type Message = { role: "assistant" | "user"; text: string };
+type IngredientResult = {
+  dishName: string;
+  summary: string;
+  ingredients: string[];
+  note: string;
+};
 
 const toolLabels: Record<Tool, string> = {
   analysis: "Image analysis",
@@ -29,7 +35,8 @@ export function AiTools() {
   const [description, setDescription] = useState("");
   const [creatorPrompt, setCreatorPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState("");
-  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [ingredientResult, setIngredientResult] =
+    useState<IngredientResult | null>(null);
   const [generatedImage, setGeneratedImage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -48,7 +55,7 @@ export function AiTools() {
     setDescription("");
     setCreatorPrompt("");
     setAnalysisResult("");
-    setIngredients([]);
+    setIngredientResult(null);
     setGeneratedImage("");
     setError("");
     setLoading(false);
@@ -92,6 +99,7 @@ export function AiTools() {
     try {
       setLoading(true);
       setError("");
+      setIngredientResult(null);
       const response = await fetch("/api/ingredients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +107,14 @@ export function AiTools() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Ingredient recognition failed.");
-      setIngredients(data.ingredients ?? []);
+      setIngredientResult({
+        dishName: String(data.dishName || "Your dish"),
+        summary: String(data.summary || "Identified ingredients:"),
+        ingredients: Array.isArray(data.ingredients)
+          ? data.ingredients.map(String)
+          : [],
+        note: String(data.note || ""),
+      });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Ingredient recognition failed.");
     } finally {
@@ -251,11 +266,16 @@ export function AiTools() {
             <ResultSection icon={<FileText />} title="Identified Ingredients">
               {loading ? (
                 <LoadingState text="Finding ingredients, just a moment..." />
-              ) : ingredients.length ? (
+              ) : ingredientResult?.ingredients.length ? (
                 <div className="result-card">
-                  <p>Here’s a quick summary of the ingredients in your food:</p>
-                  <ul>{ingredients.map((item) => <li key={item}>{item}</li>)}</ul>
-                  <p>Simple, classic, and delicious!</p>
+                  <p>{ingredientResult.summary}</p>
+                  <p><strong>{ingredientResult.dishName}</strong></p>
+                  <ul>
+                    {ingredientResult.ingredients.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                  {ingredientResult.note && <p>{ingredientResult.note}</p>}
                 </div>
               ) : (
                 <p className="muted">First, enter your text to recognize ingredients.</p>
