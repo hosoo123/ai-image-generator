@@ -44,7 +44,10 @@ export function AiTools() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", text: "How can I help you today?" },
+    {
+      role: "assistant",
+      text: "Сайн байна уу! Би танд хоол, орц, жор болон бусад асуултаар тусалж чадна. Юу асуух вэ?",
+    },
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
