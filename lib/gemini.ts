@@ -20,7 +20,7 @@ export async function generateGeminiReply(messages: GeminiMessage[]) {
     );
   }
 
-  const model = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_CHAT_MODEL || "gemini-3.6-flash";
   let response: Response | undefined;
   let details = "";
 
@@ -47,7 +47,6 @@ export async function generateGeminiReply(messages: GeminiMessage[]) {
           })),
           generationConfig: {
             maxOutputTokens: 450,
-            temperature: 0.5,
           },
         }),
       },
