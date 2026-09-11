@@ -116,6 +116,7 @@ export async function generateGeminiText(
   systemInstruction: string,
   userText: string,
   maxOutputTokens = 400,
+  maxAttempts = 1,
 ) {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -129,7 +130,7 @@ export async function generateGeminiText(
   let response: Response | undefined;
   let details = "";
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
@@ -155,7 +156,7 @@ export async function generateGeminiText(
     details = await response.text();
     const canRetry = response.status === 429 || response.status === 503;
 
-    if (!canRetry || attempt === 2) {
+    if (!canRetry || attempt === maxAttempts - 1) {
       throw new Error(`Gemini API error ${response.status}: ${details}`);
     }
 

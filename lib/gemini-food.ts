@@ -1,5 +1,9 @@
 import { generateGeminiText } from "@/lib/gemini";
-import { fallbackEnglishFoodPrompt } from "@/lib/mongolian-dishes";
+import {
+  fallbackEnglishFoodPrompt,
+  knownEnglishFoodPrompt,
+  knownIngredientResult,
+} from "@/lib/mongolian-dishes";
 
 export type FoodIngredientResult = {
   dishName: string;
@@ -70,11 +74,17 @@ export function parseIngredientResult(text: string): FoodIngredientResult {
 }
 
 export async function recognizeFoodIngredients(description: string) {
+  const known = knownIngredientResult(description);
+  if (known) return known;
+
   const reply = await generateGeminiText(INGREDIENT_SYSTEM, description, 500);
   return parseIngredientResult(reply);
 }
 
 export async function toEnglishFoodImagePrompt(prompt: string) {
+  const known = knownEnglishFoodPrompt(prompt);
+  if (known) return known;
+
   try {
     const reply = cleanModelText(
       await generateGeminiText(IMAGE_PROMPT_SYSTEM, prompt, 180),

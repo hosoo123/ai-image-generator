@@ -35,14 +35,7 @@ export async function POST(request: Request) {
 
     try {
       return Response.json(await recognizeFoodIngredients(text));
-    } catch (error) {
-      const missingGemini =
-        error instanceof Error && error.message.includes("GEMINI_API_KEY");
-
-      if (!missingGemini && process.env.GEMINI_API_KEY) {
-        throw error;
-      }
-
+    } catch {
       return Response.json(await recognizeWithQwen(text));
     }
   } catch (error) {
