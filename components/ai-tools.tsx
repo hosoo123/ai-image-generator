@@ -269,7 +269,7 @@ export function AiTools() {
             <ResultSection icon={<FileText />} title="Танигдсан орцууд">
               {loading ? (
                 <LoadingState text="Орцыг хайж байна, түр хүлээнэ үү..." />
-              ) : ingredientResult?.ingredients.length ? (
+              ) : ingredientResult?.dishName || ingredientResult?.ingredients.length ? (
                 <div className="result-card">
                   <p>{ingredientResult.summary}</p>
                   <p><strong>{ingredientResult.dishName}</strong></p>

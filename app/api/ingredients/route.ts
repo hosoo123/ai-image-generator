@@ -1,4 +1,27 @@
+import {
+  parseIngredientResult,
+  recognizeFoodIngredients,
+} from "@/lib/gemini-food";
 import { apiError, getHuggingFaceClient } from "@/lib/huggingface";
+
+const QWEN_SYSTEM =
+  'Identify the dish and extract its typical ingredients. A short dish name is enough. Cyrillic Mongolian and Mongolian Latin letters are Mongolian. When the user writes Mongolian, reply in Mongolian Cyrillic. When the user writes English, reply in English. Return only valid JSON with this exact shape: {"dishName":"...","summary":"...","ingredients":["..."],"note":"..."}. The summary must introduce the identified dish and ingredient list. The note must be one short, friendly closing sentence. Do not use markdown.';
+
+async function recognizeWithQwen(description: string) {
+  const client = getHuggingFaceClient();
+  const result = await client.chatCompletion({
+    model: process.env.HF_CHAT_MODEL || "Qwen/Qwen3-32B",
+    provider: "auto",
+    max_tokens: 1200,
+    temperature: 0.1,
+    messages: [
+      { role: "system", content: QWEN_SYSTEM },
+      { role: "user", content: description },
+    ],
+  });
+
+  return parseIngredientResult(String(result.choices[0]?.message.content || ""));
+}
 
 export async function POST(request: Request) {
   try {
@@ -8,40 +31,20 @@ export async function POST(request: Request) {
       return Response.json({ error: "Хоолоо тайлбарлана уу." }, { status: 400 });
     }
 
-    const client = getHuggingFaceClient();
-    const result = await client.chatCompletion({
-      model: process.env.HF_CHAT_MODEL || "Qwen/Qwen3-32B",
-      provider: "auto",
-      max_tokens: 300,
-      temperature: 0.1,
-      messages: [
-        {
-          role: "system",
-          content:
-            'Identify the dish and extract its ingredients from the user description. Return only valid JSON with this exact shape: {"dishName":"...","summary":"...","ingredients":["..."],"note":"..."}. The summary must introduce the identified dish and ingredient list. The note must be one short, friendly closing sentence. Do not use markdown. Do not claim uncertain ingredients as certain. Language rules: reply in the language of the user\'s latest message; when the user writes in Mongolian Cyrillic, write dishName, summary, ingredients, and note in fluent natural Mongolian Cyrillic; when the user writes Mongolian using Latin letters, understand it as Mongolian and reply in Mongolian Cyrillic; when the user writes in English, reply in English; do not translate Mongolian into English unless the user wrote in English; avoid stiff or machine-translated Mongolian.',
-        },
-        { role: "user", content: description.trim() },
-      ],
-    });
+    const text = description.trim();
 
-    const content = String(result.choices[0]?.message.content || "{}");
-    const json = content.match(/\{[\s\S]*\}/)?.[0] || "{}";
-    const parsed = JSON.parse(json) as {
-      dishName?: unknown;
-      summary?: unknown;
-      ingredients?: unknown;
-      note?: unknown;
-    };
-    const ingredients = Array.isArray(parsed.ingredients)
-      ? parsed.ingredients.map(String).slice(0, 30)
-      : [];
+    try {
+      return Response.json(await recognizeFoodIngredients(text));
+    } catch (error) {
+      const missingGemini =
+        error instanceof Error && error.message.includes("GEMINI_API_KEY");
 
-    return Response.json({
-      dishName: String(parsed.dishName || "Таны хоол"),
-      summary: String(parsed.summary || "Хоолны орцууд:"),
-      ingredients,
-      note: String(parsed.note || "Энгийн, амттай хоол!"),
-    });
+      if (!missingGemini && process.env.GEMINI_API_KEY) {
+        throw error;
+      }
+
+      return Response.json(await recognizeWithQwen(text));
+    }
   } catch (error) {
     return apiError(error);
   }

@@ -111,3 +111,72 @@ Conversation rules:
 
   return reply;
 }
+
+export async function generateGeminiText(
+  systemInstruction: string,
+  userText: string,
+  maxOutputTokens = 400,
+) {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY is missing. Add it to .env.local or Vercel Environment Variables.",
+    );
+  }
+
+  const model = process.env.GEMINI_CHAT_MODEL || "gemini-3.6-flash";
+  let response: Response | undefined;
+  let details = "";
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemInstruction }],
+          },
+          contents: [{ role: "user", parts: [{ text: userText }] }],
+          generationConfig: {
+            maxOutputTokens,
+          },
+        }),
+      },
+    );
+
+    if (response.ok) break;
+
+    details = await response.text();
+    const canRetry = response.status === 429 || response.status === 503;
+
+    if (!canRetry || attempt === 2) {
+      throw new Error(`Gemini API error ${response.status}: ${details}`);
+    }
+
+    await new Promise((resolve) =>
+      setTimeout(resolve, 700 * 2 ** attempt),
+    );
+  }
+
+  if (!response?.ok) {
+    throw new Error(`Gemini API request failed: ${details}`);
+  }
+
+  const data = (await response.json()) as GeminiResponse;
+  const reply = data.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+
+  if (!reply) {
+    throw new Error("Gemini returned an empty reply.");
+  }
+
+  return reply;
+}
