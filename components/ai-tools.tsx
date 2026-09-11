@@ -109,17 +109,17 @@ export function AiTools() {
         body: JSON.stringify({ description }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Ingredient recognition failed.");
+      if (!response.ok) throw new Error(data.error || "Орц танихад алдаа гарлаа.");
       setIngredientResult({
-        dishName: String(data.dishName || "Your dish"),
-        summary: String(data.summary || "Identified ingredients:"),
+        dishName: String(data.dishName || "Таны хоол"),
+        summary: String(data.summary || "Хоолны орцууд:"),
         ingredients: Array.isArray(data.ingredients)
           ? data.ingredients.map(String)
           : [],
         note: String(data.note || ""),
       });
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Ingredient recognition failed.");
+      setError(error instanceof Error ? error.message : "Орц танихад алдаа гарлаа.");
     } finally {
       setLoading(false);
     }
@@ -136,10 +136,10 @@ export function AiTools() {
         body: JSON.stringify({ prompt: creatorPrompt }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Image generation failed.");
+      if (!response.ok) throw new Error(data.error || "Зураг үүсгэхэд алдаа гарлаа.");
       setGeneratedImage(String(data.image));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Image generation failed.");
+      setError(error instanceof Error ? error.message : "Зураг үүсгэхэд алдаа гарлаа.");
     } finally {
       setLoading(false);
     }
@@ -245,13 +245,13 @@ export function AiTools() {
           <ToolSection
             icon={<Sparkles />}
             title="Ingredient recognition"
-            description="Describe the food, and AI will detect the ingredients."
+            description="Хоолоо тайлбарлавал AI орцыг нь танина."
             onReset={reset}
           >
             <textarea
               className="text-area"
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe your food..."
+              placeholder="Хоолоо тайлбарлана уу..."
               value={description}
             />
             <div className="actions">
@@ -262,13 +262,13 @@ export function AiTools() {
                 type="button"
               >
                 {loading && <LoaderCircle className="spin" />}
-                {loading ? "Recognizing..." : "Generate"}
+                {loading ? "Таниж байна..." : "Таних"}
               </button>
             </div>
 
-            <ResultSection icon={<FileText />} title="Identified Ingredients">
+            <ResultSection icon={<FileText />} title="Танигдсан орцууд">
               {loading ? (
-                <LoadingState text="Finding ingredients, just a moment..." />
+                <LoadingState text="Орцыг хайж байна, түр хүлээнэ үү..." />
               ) : ingredientResult?.ingredients.length ? (
                 <div className="result-card">
                   <p>{ingredientResult.summary}</p>
@@ -281,7 +281,7 @@ export function AiTools() {
                   {ingredientResult.note && <p>{ingredientResult.note}</p>}
                 </div>
               ) : (
-                <p className="muted">First, enter your text to recognize ingredients.</p>
+                <p className="muted">Эхлээд хоолоо бичээд орцыг таниулна уу.</p>
               )}
             </ResultSection>
           </ToolSection>
@@ -291,13 +291,13 @@ export function AiTools() {
           <ToolSection
             icon={<Sparkles />}
             title="Food image creator"
-            description="What food image do you want? Describe it briefly."
+            description="Ямар хоолны зураг хүсэж байна? Товчхон тайлбарлана уу."
             onReset={reset}
           >
             <textarea
               className="text-area"
               onChange={(event) => setCreatorPrompt(event.target.value)}
-              placeholder="A delicious plate of pasta carbonara..."
+              placeholder="Шаржигнуун хуушуур, хажууд нь цөцгийтэй..."
               value={creatorPrompt}
             />
             <div className="actions">
@@ -308,20 +308,20 @@ export function AiTools() {
                 type="button"
               >
                 {loading && <LoaderCircle className="spin" />}
-                {loading ? "Creating..." : "Generate"}
+                {loading ? "Үүсгэж байна..." : "Үүсгэх"}
               </button>
             </div>
 
-            <ResultSection icon={<ImageIcon />} title="Result">
+            <ResultSection icon={<ImageIcon />} title="Үр дүн">
               {loading ? (
-                <LoadingState text="Creating your food image..." />
+                <LoadingState text="Хоолны зургийг үүсгэж байна..." />
               ) : generatedImage ? (
                 <div className="result-card image-result">
-                  <strong>{creatorPrompt || "Pasta carbonara"}</strong>
-                  <img alt={creatorPrompt || "Generated food"} src={generatedImage} />
+                  <strong>{creatorPrompt || "Хуушуур"}</strong>
+                  <img alt={creatorPrompt || "Үүсгэсэн хоол"} src={generatedImage} />
                 </div>
               ) : (
-                <p className="muted">Describe an image and select Generate to see the result.</p>
+                <p className="muted">Зургийн тайлбараа бичээд Үүсгэх-ийг дарна уу.</p>
               )}
             </ResultSection>
           </ToolSection>

@@ -5,7 +5,7 @@ export async function POST(request: Request) {
     const { description } = (await request.json()) as { description?: string };
 
     if (!description?.trim()) {
-      return Response.json({ error: "Please describe the food." }, { status: 400 });
+      return Response.json({ error: "Хоолоо тайлбарлана уу." }, { status: 400 });
     }
 
     const client = getHuggingFaceClient();
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            'Identify the dish and extract its ingredients from the user description. Reply in the same language as the user. Return only valid JSON with this exact shape: {"dishName":"...","summary":"...","ingredients":["..."],"note":"..."}. The summary must introduce the identified dish and ingredient list. The note must be one short, friendly closing sentence. Do not use markdown. Do not claim uncertain ingredients as certain.',
+            'Identify the dish and extract its ingredients from the user description. Return only valid JSON with this exact shape: {"dishName":"...","summary":"...","ingredients":["..."],"note":"..."}. The summary must introduce the identified dish and ingredient list. The note must be one short, friendly closing sentence. Do not use markdown. Do not claim uncertain ingredients as certain. Language rules: reply in the language of the user\'s latest message; when the user writes in Mongolian Cyrillic, write dishName, summary, ingredients, and note in fluent natural Mongolian Cyrillic; when the user writes Mongolian using Latin letters, understand it as Mongolian and reply in Mongolian Cyrillic; when the user writes in English, reply in English; do not translate Mongolian into English unless the user wrote in English; avoid stiff or machine-translated Mongolian.',
         },
         { role: "user", content: description.trim() },
       ],
@@ -37,12 +37,10 @@ export async function POST(request: Request) {
       : [];
 
     return Response.json({
-      dishName: String(parsed.dishName || "Your dish"),
-      summary: String(
-        parsed.summary || "Here is a quick summary of the identified ingredients:",
-      ),
+      dishName: String(parsed.dishName || "Таны хоол"),
+      summary: String(parsed.summary || "Хоолны орцууд:"),
       ingredients,
-      note: String(parsed.note || "Simple, classic, and delicious!"),
+      note: String(parsed.note || "Энгийн, амттай хоол!"),
     });
   } catch (error) {
     return apiError(error);
